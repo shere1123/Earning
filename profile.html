@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile & Navigation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; padding-bottom: 80px; }
+        
+        .profile-header {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            padding: 40px 20px; text-align: center; color: white;
+            border-radius: 0 0 30px 30px;
+        }
+        .profile-img {
+            width: 90px; height: 90px; border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.4); object-fit: cover;
+        }
+
+        .action-buttons { display: flex; justify-content: center; gap: 15px; margin-top: -25px; }
+        .btn-action {
+            background: white; color: #1e3c72; padding: 12px 20px;
+            border-radius: 15px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-decoration: none; text-align: center; min-width: 120px;
+        }
+
+        .menu-container { margin-top: 30px; padding: 0 20px; }
+        .menu-item {
+            background: white; display: flex; align-items: center;
+            padding: 15px; border-radius: 12px; margin-bottom: 10px;
+            text-decoration: none; color: #333; box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+        }
+        .menu-item i { margin-right: 15px; color: #1e3c72; width: 20px; }
+
+        .bottom-nav {
+            position: fixed; bottom: 0; width: 100%; background: white;
+            display: flex; justify-content: space-around; padding: 10px 0;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1); border-top: 1px solid #eee;
+        }
+        .nav-item { text-align: center; color: #888; text-decoration: none; font-size: 0.8rem; }
+        .nav-item.active { color: #1e3c72; font-weight: bold; }
+        .nav-item i { font-size: 1.4rem; display: block; }
+
+        .referral-box {
+            background: #f8f9fa; padding: 8px; border-radius: 8px;
+            font-size: 0.8rem; border: 1px dashed #ccc; margin-top: 5px;
+        }
+
+        .withdraw-popup { border-radius: 20px !important; padding: 10px !important; }
+        .withdraw-input { height: 40px !important; font-size: 0.9rem !important; margin: 8px auto !important; border-radius: 8px !important; width: 85% !important; }
+        .withdraw-title { font-size: 1.2rem !important; color: #fff !important; margin-top: 5px !important; }
+    </style>
+</head>
+<body>
+
+    <div class="profile-header">
+        <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png" class="profile-img">
+        <div class="mt-2 fw-bold fs-5" id="userName">Loading...</div>
+        <div class="small opacity-75">Phone: <span id="userPhoneDisplay">...</span></div>
+    </div>
+
+    <div class="action-buttons">
+        <a href="deposit.html" class="btn-action">
+            <i class="fa-solid fa-plus-circle text-success d-block mb-1"></i> Deposit
+        </a>
+        <a href="javascript:void(0)" class="btn-action" onclick="openWithdraw()">
+            <i class="fa-solid fa-money-bill-wave text-primary d-block mb-1"></i> Withdraw
+        </a>
+    </div>
+
+    <div class="menu-container">
+        <a href="#" class="menu-item"><i class="fa-solid fa-history"></i> History</a>
+        
+        <div class="menu-item flex-column align-items-start">
+            <div><i class="fa-solid fa-share-nodes"></i> Referral Link</div>
+            <div class="referral-box w-100 text-center" onclick="copyRef()">
+                https://mysite.com/ref/<span id="refCode">...</span> <i class="fa-copy ms-2"></i>
+            </div>
+        </div>
+
+        <a href="#" class="menu-item text-danger" onclick="handleLogout()">
+            <i class="fa-solid fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="home.html" class="nav-item">
+            <i class="fa-solid fa-house"></i> Home
+        </a>
+        <a href="trading.html" class="nav-item">
+            <i class="fa-solid fa-chart-line"></i> Trading
+        </a>
+        <a href="profile.html" class="nav-item active">
+            <i class="fa-solid fa-user"></i> Profile
+        </a>
+    </nav>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBk55D5GqpaVa9zpdYM_p00syFj8tPta4g",
+            authDomain: "riya-9c6d4.firebaseapp.com",
+            projectId: "riya-9c6d4",
+            storageBucket: "riya-9c6d4.firebasestorage.app",
+            messagingSenderId: "169192342445",
+            appId: "1:169192342445:web:127f76562d4eb3fbfe5724"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let userPhone = localStorage.getItem("userPhone");
+        if (!userPhone) {
+            userPhone = "9840000000"; 
+            localStorage.setItem("userPhone", userPhone);
+        }
+
+        document.getElementById("userPhoneDisplay").innerText = userPhone;
+        document.getElementById("refCode").innerText = userPhone;
+
+        let userBalance = 0; 
+
+        const fetchUserData = async () => {
+            try {
+                const docRef = doc(db, "users", userPhone);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const userData = docSnap.data();
+                    document.getElementById("userName").innerText = userData.name || "प्रयोगकर्ता";
+                    userBalance = Number(userData.balance) || 0; 
+                } else {
+                    document.getElementById("userName").innerText = "राम बहादुर थापा";
+                }
+            } catch (error) {
+                document.getElementById("userName").innerText = "राम बहादुर थापा";
+            }
+        };
+        fetchUserData();
+
+        window.openWithdraw = async function() {
+            const { value: formValues } = await Swal.fire({
+                title: 'Money Withdrawal',
+                background: '#1e3c72',
+                color: '#fff',
+                width: '310px',
+                padding: '1rem',
+                customClass: { popup: 'withdraw-popup', title: 'withdraw-title' },
+                html:
+                    '<div style="font-size: 0.85rem; color: #ffeb3b; margin-bottom: 5px;">ब्यालेन्स: रु ' + userBalance + '</div>' +
+                    '<select id="method" class="swal2-input withdraw-input"><option value="eSewa">eSewa</option><option value="Khalti">Khalti</option></select>' +
+                    '<input id="wallet-id" class="swal2-input withdraw-input" placeholder="Wallet Number">' +
+                    '<input id="amount" type="number" class="swal2-input withdraw-input" placeholder="Amount (Min 150)">',
+                focusConfirm: false,
+                confirmButtonText: 'Withdraw',
+                confirmButtonColor: '#28a745',
+                showCancelButton: true,
+                cancelButtonColor: '#d33',
+                preConfirm: () => {
+                    return {
+                        method: document.getElementById('method').value,
+                        id: document.getElementById('wallet-id').value,
+                        amount: Number(document.getElementById('amount').value)
+                    }
+                }
+            });
+
+            if (formValues) {
+                if (formValues.amount < 150) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'न्यूनतम १५० रुपैयाँ हुनुपर्छ!', width: '300px' });
+                } else if (formValues.amount > userBalance) {
+                    Swal.fire({ icon: 'error', title: 'ब्यालेन्स पुगेन!', text: 'तपाईंको खातामा पर्याप्त रकम छैन!', width: '300px' });
+                } else if (!formValues.id) {
+                    Swal.fire({ icon: 'error', title: 'Oops...', text: 'Wallet ID खाली छ!', width: '300px' });
+                } else {
+                    Swal.fire({ icon: 'success', title: 'Success', text: formValues.method + ' अनुरोध पठाइयो!', width: '300px' });
+                }
+            }
+        };
+
+        window.copyRef = function() {
+            navigator.clipboard.writeText("https://mysite.com/ref/" + userPhone);
+            Swal.fire({ title: 'Copied!', icon: 'success', timer: 1000, showConfirmButton: false, width: '250px' });
+        };
+
+        window.handleLogout = function() {
+            Swal.fire({
+                title: 'Logout?', text: 'बाहिरिन चाहनुहुन्छ?', icon: 'warning',
+                showCancelButton: true, confirmButtonText: 'Yes', confirmButtonColor: '#d33', width: '300px'
+            }).then((res) => { 
+                if (res.isConfirmed) {
+                    localStorage.removeItem("userPhone");
+                    window.location.href = "login.html"; 
+                }
+            });
+        };
+    </script>
+</body>
+</html>

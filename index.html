@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login & Register - Firebase Linked</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .auth-container { width: 100%; max-width: 400px; padding: 20px; }
+        .auth-card { background: white; padding: 25px; border-radius: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .nav-pills { background: #f1f3f5; border-radius: 15px; padding: 5px; margin-bottom: 25px; }
+        .nav-link { border-radius: 12px !important; color: #555; font-weight: 600; }
+        .nav-pills .nav-link.active { background: linear-gradient(135deg, #1e3c72, #2a5298) !important; }
+        .input-group { margin-bottom: 18px; }
+        .input-group-text { background: #f8f9fa; border-right: none; color: #1e3c72; border-radius: 12px 0 0 12px; }
+        .form-control { border-left: none; border-radius: 0 12px 12px 0; padding: 12px; background: #f8f9fa; }
+        .btn-auth { background: linear-gradient(to right, #1e3c72, #2a5298); color: white; border: none; width: 100%; padding: 12px; border-radius: 12px; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <ul class="nav nav-pills nav-fill" id="pills-tab" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pills-login" type="button">लगइन</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#pills-register" type="button">दर्ता</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="pills-login">
+                <form id="loginForm">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
+                        <input type="number" id="loginPhone" class="form-control" placeholder="फोन नम्बर" required>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" id="loginPass" class="form-control" placeholder="पासवर्ड" required>
+                    </div>
+                    <button type="submit" id="loginBtn" class="btn-auth">लगइन गर्नुहोस्</button>
+                </form>
+            </div>
+
+            <div class="tab-pane fade" id="pills-register">
+                <form id="registerForm">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" id="regName" class="form-control" placeholder="पूरा नाम" required>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
+                        <input type="number" id="regPhone" class="form-control" placeholder="फोन नम्बर" required>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" id="regPass" class="form-control" placeholder="पासवर्ड बनाउनुहोस्" required>
+                    </div>
+                    <button type="submit" id="regBtn" class="btn-auth">खाता बनाउनुहोस्</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBk55D5GqpaVa9zpdYM_p00syFj8tPta4g",
+        authDomain: "riya-9c6d4.firebaseapp.com",
+        projectId: "riya-9c6d4",
+        storageBucket: "riya-9c6d4.firebasestorage.app",
+        messagingSenderId: "169192342445",
+        appId: "1:169192342445:web:127f76562d4eb3fbfe5724"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Register Handling
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('regName').value;
+        const phone = document.getElementById('regPhone').value;
+        const pass = document.getElementById('regPass').value;
+        const regBtn = document.getElementById('regBtn');
+
+        if(phone.length < 10) {
+            Swal.fire('गल्ती', 'फोन नम्बर १० अंकको हुनुपर्छ।', 'error');
+            return;
+        }
+
+        regBtn.disabled = true;
+        regBtn.innerText = "प्रक्रिया हुँदैछ...";
+
+        try {
+            // Check if user exists
+            const userRef = doc(db, "users", phone);
+            const userSnap = await getDoc(userRef);
+
+            if (userSnap.exists()) {
+                Swal.fire('गल्ती', 'यो फोन नम्बर पहिले नै दर्ता छ।', 'error');
+                regBtn.disabled = false;
+            } else {
+                await setDoc(userRef, {
+                    name: name,
+                    phone: phone,
+                    password: pass,
+                    balance: 0,
+                    joinedAt: new Date().toISOString()
+                });
+                
+                localStorage.setItem("userPhone", phone);
+                Swal.fire('सफल', 'खाता बन्यो!', 'success').then(() => {
+                    window.location.href = "home.html";
+                });
+            }
+        } catch (err) {
+            Swal.fire('Error', 'केही समस्या आयो।', 'error');
+            regBtn.disabled = false;
+        }
+    });
+
+    // Login Handling
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const phone = document.getElementById('loginPhone').value;
+        const pass = document.getElementById('loginPass').value;
+        const loginBtn = document.getElementById('loginBtn');
+
+        loginBtn.disabled = true;
+        loginBtn.innerText = "चेक हुँदैछ...";
+
+        try {
+            const userRef = doc(db, "users", phone);
+            const userSnap = await getDoc(userRef);
+
+            if (userSnap.exists() && userSnap.data().password === pass) {
+                localStorage.setItem("userPhone", phone);
+                Swal.fire({ icon: 'success', title: 'लगइन सफल!', showConfirmButton: false, timer: 1500 })
+                .then(() => { window.location.href = "home.html"; });
+            } else {
+                Swal.fire('गल्ती', 'फोन नम्बर वा पासवर्ड मिलेन।', 'error');
+                loginBtn.disabled = false;
+                loginBtn.innerText = "लगइन गर्नुहोस्";
+            }
+        } catch (err) {
+            Swal.fire('Error', 'लगइन हुन सकेन।', 'error');
+            loginBtn.disabled = false;
+        }
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
